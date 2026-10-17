@@ -16,7 +16,7 @@ two-point method and prints a first set of gains:
     python3 tools/identify.py step.csv            # lambda = tau
     python3 tools/identify.py step.csv --lam 0.15 # a gentler loop
 
-The simulated plant can be logged the same way (see `tests/test_identify.py` for how a step is run on it).
+Log a step from the simulated plant with `python3 tools/log_step.py step.csv` (options: `--output`, `--noise`, `--tau`, `--gain`, `--delay`); the real board will produce the same file format later.
 
 ## 2. Where the suggestion comes from
 

@@ -7,10 +7,10 @@ undefined-behaviour sanitiser), and the gains are chosen by measuring the plant 
 
 ## Status
 
-- [ ] PID controller written (`core/pid.c`): rules R1 to R8 in [docs/SPEC.md](docs/SPEC.md)
-- [ ] Sensor supervisor written (`core/supervisor.c`): rules S1 to S4
-- [ ] Gains chosen from a measured plant (`core/gains.h`, [docs/TUNING.md](docs/TUNING.md))
-- [ ] Closed-loop requirements REQ-1 to REQ-7 met on the simulated plant
+- [x] PID controller written (`core/pid.c`): rules R1 to R8 in [docs/SPEC.md](docs/SPEC.md)
+- [x] Sensor supervisor written (`core/supervisor.c`): rules S1 to S4
+- [x] Gains chosen from a measured plant (`core/gains.h`, [docs/TUNING.md](docs/TUNING.md))
+- [x] Closed-loop requirements REQ-1 to REQ-7 met on the simulated plant
 - [ ] On-board loop: the controller running on the STM32 against a real RC-filter plant, with a hardware-in-the-loop test runner (not started)
 
 ## Run it
@@ -19,6 +19,7 @@ undefined-behaviour sanitiser), and the gains are chosen by measuring the plant 
     source ~/.venvs/stm32-pid-control-lab/bin/activate
     python -m pytest -q                              # everything
     python tools/step_plot.py                        # the four-panel picture of the closed loop
+    python tools/log_step.py step.csv                # log an open-loop step from the simulated plant (the real board will make the same file)
     python tools/identify.py step.csv                # fit a plant model to a logged step and suggest gains
 
 ## What is tested
@@ -29,7 +30,7 @@ undefined-behaviour sanitiser), and the gains are chosen by measuring the plant 
 | `tests/test_supervisor.py` | the fault logic to the sample: exactly 5 bad readings to declare, exactly 20 good to clear, exact limits, restarts |
 | `tests/test_closed_loop.py` | the loop against the simulated plant: step response, 27 different plants, noise, a load disturbance, windup, a failed sensor |
 | `tests/test_hygiene.py` | no compiler warnings, no floating point, gains in range |
-| `tests/test_plant.py`, `test_identify.py`, `test_step_plot.py` | the test equipment itself (the simulator, the plant-fitting tool, the plotting tool), so a failing loop test means the controller is at fault |
+| `tests/test_plant.py`, `test_identify.py`, `test_step_plot.py`, `test_log_step.py` | the test equipment itself (the simulator, the plant-fitting, plotting and step-logging tools), so a failing loop test means the controller is at fault |
 
 The simulated plant (`tests/plant.py`) is a first-order lag with a transport delay, a load input, ADC noise and 12-bit quantisation. The limits are in
 `tests/requirements.py`, in one place.
@@ -38,7 +39,7 @@ The simulated plant (`tests/plant.py`) is a first-order lag with a transport del
 
     core/    pid.[ch]  supervisor.[ch]  gains.h   control.[ch] (calls the PID and then the supervisor; this is what the firmware will call each sample)
     tests/   the pytest suite, the simulated plant and a small C wrapper that lets Python call the C code
-    tools/   identify.py (plant model and gains from a logged step)  step_plot.py  setup_ubuntu.sh
+    tools/   identify.py (plant model and gains from a logged step)  log_step.py  step_plot.py  setup_ubuntu.sh
     docs/    SPEC.md (the rules)  TUNING.md (how the gains are chosen)
 
 ## Honest limits
