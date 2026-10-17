@@ -1,4 +1,4 @@
-/* pid.h - a fixed-point PID controller. THIS IS PART OF WHAT YOU WRITE: see docs/SPEC.md for the rules the tests check.
+/* pid.h - a fixed-point PID controller.
  *
  * Numbers are plain integers, with no floating point (the STM32L0 has no floating-point unit).
  *   - Gains are Q16.16 fixed point: real value = raw / 65536, so 1.0 is PID_ONE (65536) and 0.0208 is about 1365.
@@ -21,8 +21,9 @@ typedef struct {
     int32_t out_min;            /* the output is always kept inside [out_min, out_max] */
     int32_t out_max;
 
-    /* TODO(you): add the state you need (the integral, the previous measurement, ...). Think about what size each one must be. */
-    int32_t todo;
+    int32_t integral;           /* the running total of ki * error, in Q16.16 output units, kept inside the output limits */
+    int32_t prev_pv;            /* the previous measurement, for the derivative term */
+    int32_t primed;             /* 0 until the first measurement has been seen (there is no "previous" one before that) */
 } pid_ctrl_t;
 
 /* Set the gains and limits and clear all state. */
