@@ -30,6 +30,10 @@ def identify(t, u, pv, smooth=5):
     base = float(np.mean(pv[max(0, k0 - 10):k0]))
     final = float(np.mean(pv[-max(5, len(pv) // 20):]))
     dpv = final - base
+    noise = max(float(np.std(pv[max(0, k0 - 50):k0])), 0.5)          # how much the reading wobbles by itself before the step
+    if abs(dpv) < 6.0 * noise:
+        raise ValueError(f"the process value did not respond to the step: it changed by {dpv:+.0f} counts while it wobbles by about {noise:.0f} counts on its own. "
+                         "Check that the sensor input is really connected to the plant, and that the output drives the plant.")
     k = dpv / du
     sm = np.convolve(pv, np.ones(smooth) / smooth, mode="same")
     sm[:smooth], sm[-smooth:] = pv[:smooth], pv[-smooth:]
@@ -47,12 +51,16 @@ def identify(t, u, pv, smooth=5):
 
     t28, t63 = crossing(0.283), crossing(0.632)
     tau = 1.5 * (t63 - t28)
+    if not np.isfinite(tau) or tau <= 0.0:
+        raise ValueError("could not fit a time constant: the response is too fast for the sample period, or too noisy. Record a step with a slower plant or a faster sample rate.")
     delay = max(0.0, t63 - tau)
     return {"gain": k, "tau": tau, "delay": delay, "ts": ts}
 
 
 def suggest(model, lam=None):
     k, tau, delay, ts = model["gain"], model["tau"], model["delay"], model["ts"]
+    if k <= 0.0 or tau <= 0.0:
+        raise ValueError(f"cannot suggest gains for a plant with gain {k:.3f} and time constant {tau:.4f} s: the controller expects a plant where more output raises the reading.")
     lam = tau if lam is None else lam
     kp = tau / (k * (lam + delay + ts / 2))
     ki = kp * ts / tau
@@ -66,8 +74,12 @@ def main(argv=None):
     a = ap.parse_args(argv)
     with open(a.csv, newline="") as f:
         rows = list(csv.DictReader(f))
-    model = identify([r["t"] for r in rows], [r["u"] for r in rows], [r["pv"] for r in rows])
-    g = suggest(model, a.lam)
+    try:
+        model = identify([r["t"] for r in rows], [r["u"] for r in rows], [r["pv"] for r in rows])
+        g = suggest(model, a.lam)
+    except ValueError as e:
+        print(f"identify: {e}", file=sys.stderr)
+        return 1
     print(f"plant:   gain {model['gain']:.3f} counts per output unit, time constant {model['tau']:.3f} s, delay {model['delay']:.3f} s "
           f"(sample period {model['ts']:.3f} s)")
     print(f"gains:   kp {g['kp']:.4f}  ki {g['ki']:.5f}  kd {g['kd']:.1f}   (lambda {g['lambda']:.3f} s)")

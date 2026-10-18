@@ -1,5 +1,6 @@
 """Tests of tools/identify.py on data from the simulated plant, where the right answer is known. Needs none of your code."""
 import csv
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -48,3 +49,42 @@ def test_the_command_line_reads_a_csv(tmp_path, capfd):
     assert identify.main([str(path)]) == 0
     printed = capfd.readouterr().out
     assert "plant:" in printed and "#define CONTROL_KP_Q16" in printed
+
+
+def test_a_reading_that_does_not_respond_to_the_step_is_refused_with_a_wiring_hint():
+    """An analogue input that is not connected reads noise (often mains hum) whatever the output does. That must be reported, not turned into a plant."""
+    n = 300
+    u = np.zeros(n)
+    u[100:] = 500
+    pv = 1700 + np.random.RandomState(1).normal(0, 100, n)
+    with pytest.raises(ValueError, match="did not respond"):
+        identify.identify(np.arange(n) * 0.001, u, pv)
+
+
+def test_the_real_capture_from_a_floating_input_is_refused(capfd):
+    """tests/data/board_step_floating_input.csv is a real capture from the Feather with the ADC input left unconnected: the reading sat near 1680 counts with 50 Hz
+    mains hum, before and after the step. It once crashed this tool with a division by zero."""
+    path = Path(__file__).parent / "data" / "board_step_floating_input.csv"
+    with open(path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    with pytest.raises(ValueError, match="did not respond"):
+        identify.identify([r["t"] for r in rows], [r["u"] for r in rows], [r["pv"] for r in rows])
+    assert identify.main([str(path)]) == 1
+    assert "did not respond" in capfd.readouterr().err
+
+
+def test_a_plant_that_responds_the_wrong_way_is_refused(tmp_path, capfd):
+    log, u = open_loop_step(Plant(noise=1.0))
+    path = tmp_path / "step.csv"
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["t", "u", "pv"])
+        w.writerows(zip(log["t"], u, 4000.0 - log["adc"]))
+    assert identify.main([str(path)]) == 1
+    assert "more output raises the reading" in capfd.readouterr().err
+
+
+def test_a_noise_free_step_still_works():
+    log, u = open_loop_step(Plant(noise=0.0))
+    m = identify.identify(log["t"], u, log["adc"])
+    assert abs(m["gain"] - 3.0) / 3.0 < 0.05
