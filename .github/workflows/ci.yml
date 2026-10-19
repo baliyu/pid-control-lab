@@ -19,3 +19,13 @@ jobs:
         run: python -m pytest -q
       - name: Plot the closed loop (the picture must be produced)
         run: python tools/step_plot.py --out /tmp/step_response.png
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck and clang-tidy
+        run: sudo apt-get update && sudo apt-get install -y cppcheck clang-tidy
+      - name: Static checks on the PID core (cppcheck and clang-tidy)
+        run: bash tools/static_check.sh
