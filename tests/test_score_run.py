@@ -50,3 +50,15 @@ def test_a_run_that_never_reaches_the_target_fails(tmp_path, run_text):
 def test_a_run_without_a_setpoint_step_is_refused():
     with pytest.raises(ValueError):
         score_run.score(np.arange(100) * 0.001, np.full(100, 500.0), np.full(100, 500.0))
+
+
+def test_a_missing_file_is_reported_not_a_traceback(tmp_path, capfd):
+    assert score_run.main([str(tmp_path / "nothing.csv")]) == 1
+    assert "from_monitor.py has to succeed first" in capfd.readouterr().err
+
+
+def test_a_step_capture_given_to_score_run_is_explained(tmp_path, capfd):
+    path = tmp_path / "step.csv"
+    path.write_text("t,u,pv\n0.000,0,203\n0.001,0,204\n")
+    assert score_run.main([str(path)]) == 1
+    assert "t,sp,u,pv" in capfd.readouterr().err

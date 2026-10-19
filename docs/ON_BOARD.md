@@ -19,17 +19,21 @@ faster than the simulated plant (100 ms). So the loop runs at 1 kHz, not 100 Hz:
 The sketch was run on the PC against a model of this circuit (`tests/test_feather_sketch.py`). These numbers are predictions; the point of the session is to find out
 where the real circuit differs.
 
-| Quantity | Predicted | Measured on the board |
+<!-- board:start -->
+| Quantity | Predicted by the PC model | Measured on the board |
 |---|---|---|
-| Resting reading (output 0, DAC at 5 %) | about 204 counts (0.165 V) | |
-| Reading after a step to output 500 | about 1945 counts | |
-| Plant gain from `identify.py` | 3.48 counts per per-mille | |
-| Time constant from `identify.py` | 10 ms | |
-| Delay from `identify.py` | under 1 ms | |
-| Closed loop to 2000 counts: overshoot | under 1 % | |
-| Closed loop to 2000 counts: settling time (+-2 %) | about 43 ms | |
-| Closed loop to 2000 counts: steady-state error | under 1 count | |
-| Output needed to hold 2000 counts | about 516 per-mille | |
+| Resting reading (output 0, DAC at 5 %) | about 204 counts (0.165 V) | 214 counts |
+| Reading after a step to output 500 | about 1945 counts | 1941 counts |
+| Plant gain from `identify.py` | 3.48 counts per per-mille | 3.45 counts per per-mille |
+| Time constant from `identify.py` | 10 ms | 10.5 ms |
+| Delay from `identify.py` | under 1 ms | 0.0 ms |
+| Closed loop to 2000 counts: highest reading above the target | under 1 % | 0.5 % |
+| Closed loop to 2000 counts: settling time (+-2 %) | about 43 ms | 41 ms |
+| Closed loop to 2000 counts: average distance from the target over the last 0.3 s (this includes the reading's own noise) | under 1 count | 2.05 counts |
+| Closed loop to 2000 counts: average reading minus the target over the last 0.3 s (the bias the integral removes) | 0 | -0.07 counts |
+| Noise of the reading while holding (standard deviation) | about 0.6 counts in the model | 2.7 counts |
+| Output needed to hold 2000 counts | about 516 per-mille | 516 per-mille |
+<!-- board:end -->
 
 Real parts differ from the model: a 100 nF ceramic capacitor can be 10 to 20 % off its marking (more with voltage and temperature), the resistor is usually 5 %, and the
 converters have offsets. A gain or time constant within about 20 % of the prediction is normal. A big difference is worth understanding.

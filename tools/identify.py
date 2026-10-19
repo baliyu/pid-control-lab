@@ -53,6 +53,9 @@ def identify(t, u, pv, smooth=5):
     tau = 1.5 * (t63 - t28)
     if not np.isfinite(tau) or tau <= 0.0:
         raise ValueError("could not fit a time constant: the response is too fast for the sample period, or too noisy. Record a step with a slower plant or a faster sample rate.")
+    if tau < 3.0 * ts:
+        raise ValueError(f"the response is too fast to measure: its time constant ({tau * 1000:.1f} ms) is under 3 samples of {ts * 1000:.1f} ms. "
+                         "If this is the direct A0-to-A1 test there is no filter, so that is expected; otherwise check that the capacitor is connected, or sample faster.")
     delay = max(0.0, t63 - tau)
     return {"gain": k, "tau": tau, "delay": delay, "ts": ts}
 

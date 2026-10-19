@@ -43,10 +43,21 @@ def main(argv=None):
     ap.add_argument("csv")
     ap.add_argument("--plot", help="also write a picture of the run to this file")
     a = ap.parse_args(argv)
-    with open(a.csv, newline="") as f:
-        rows = list(csv.DictReader(f))
+    try:
+        with open(a.csv, newline="") as f:
+            rows = list(csv.DictReader(f))
+    except OSError:
+        print(f"score_run: {a.csv} does not exist. tools/from_monitor.py has to succeed first (it prints 'wrote {a.csv}').", file=sys.stderr)
+        return 1
+    if not rows or not {"t", "sp", "u", "pv"} <= set(rows[0]):
+        print(f"score_run: {a.csv} needs the columns t,sp,u,pv, which a closed-loop run (R2000) prints; a step capture (S500) has t,u,pv.", file=sys.stderr)
+        return 1
     t, sp, u, pv = (np.array([float(r[k]) for r in rows]) for k in ("t", "sp", "u", "pv"))
-    m = score(t, sp, pv)
+    try:
+        m = score(t, sp, pv)
+    except ValueError as e:
+        print(f"score_run: {e}", file=sys.stderr)
+        return 1
     limits = {"overshoot_pct": R.REQ1_MAX_OVERSHOOT_PCT, "settle_s": R.REQ1_MAX_SETTLE_S * TIME_SCALE, "steady_error": R.REQ1_MAX_STEADY_ERROR}
     ok = True
     for key, label, unit in (("overshoot_pct", "overshoot", "%"), ("settle_s", "settling time", "s"), ("steady_error", "steady-state error", "counts")):

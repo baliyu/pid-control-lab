@@ -11,7 +11,7 @@ undefined-behaviour sanitiser), and the gains are chosen by measuring the plant 
 - [x] Sensor supervisor written (`core/supervisor.c`): rules S1 to S4
 - [x] Gains chosen from a measured plant (`core/gains.h`, [docs/TUNING.md](docs/TUNING.md))
 - [x] Closed-loop requirements REQ-1 to REQ-7 met on the simulated plant
-- [ ] On-board loop: the controller running on a Feather M0 (SAMD21, Cortex-M0+) against a real RC-filter plant, as described in [docs/ON_BOARD.md](docs/ON_BOARD.md). The sketch and the tools are written and tested against a model of the circuit on the PC; the run on the real board has not been done yet. The STM32 port is not started.
+- [x] On-board loop: the controller running on a Feather M0 (SAMD21, Cortex-M0+) against a real RC-filter plant (100 kOhm and 100 nF), with the captures kept in `results/board/` and compared with the PC model's predictions in [docs/ON_BOARD.md](docs/ON_BOARD.md). The plant is an electrical stand-in, not a heater, and the STM32 port is not started.
 
 ## Run it
 
@@ -46,7 +46,7 @@ The simulated plant (`tests/plant.py`) is a first-order lag with a transport del
 
 ## Honest limits
 
-- Everything above runs against a **simulated** plant. Nothing here has run on a board yet, and no claim is made about a real heater or a real RC filter until the last item in the status list is ticked.
+- The test tables above run against a **simulated** plant. The on-board run (docs/ON_BOARD.md) used one Feather M0 and one RC circuit (100 kOhm, 100 nF), an electrical stand-in: no claim is made about a real thermal process, long-term drift, or the STM32 port.
 - The plant is first-order with a delay. Real processes can have a second pole, a nonlinear gain or a sensor with its own lag.
 - The tests run on a PC (x86-64): they find logic and overflow bugs, but not timing, stack use or compiler differences on the Cortex-M0+.
 - The sample rate is fixed at 100 Hz; jitter in the real sample period is not modelled.
