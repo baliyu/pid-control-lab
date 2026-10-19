@@ -1,0 +1,9 @@
+# clang-tidy settings for the PID core (core/*.c).
+# Checks: CERT-style rules, bugprone checks and the clang static analyser.
+# One check is switched off on purpose: bugprone-easily-swappable-parameters.
+# Reason: it warns that two int32_t parameters side by side could be swapped
+# (pid_init's kp/ki/kd, actuator_scale, sup_step). It is a design warning, not a
+# defect check. A test swapped kp and ki in core/control.c and 30 of the 181
+# tests failed, so a swap is caught by the tests. See the README, "Static analysis".
+Checks: '-*,cert-*,bugprone-*,clang-analyzer-*,-bugprone-easily-swappable-parameters'
+WarningsAsErrors: '*'
