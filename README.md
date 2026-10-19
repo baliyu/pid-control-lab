@@ -1,7 +1,7 @@
 <!-- pid-lab -->
-# stm32-pid-control-lab
+# pid-control-lab
 
-A fixed-point PID controller and a sensor-fault supervisor in C, written for an STM32 (Cortex-M0+, no floating-point unit) and tested from Python against a
+A fixed-point PID controller and a sensor-fault supervisor in C, written for Cortex-M0+ microcontrollers (no floating-point unit) and tested from Python against a
 simulated plant. The emphasis is on method: the requirements are written down as numbers first, the tests are built to catch bugs (including overflow, with the
 undefined-behaviour sanitiser), and the gains are chosen by measuring the plant and then tuning, not by guessing.
 
