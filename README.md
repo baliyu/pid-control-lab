@@ -40,9 +40,24 @@ The simulated plant (`tests/plant.py`) is a first-order lag with a transport del
 
     core/    pid.[ch]  supervisor.[ch]  actuator.[ch]  gains.h   control.[ch] (calls the PID and then the supervisor; this is what the firmware will call each sample)
     tests/   the pytest suite, the simulated plant and a small C wrapper that lets Python call the C code
-    tools/   identify.py (plant model and gains from a logged step)  log_step.py  step_plot.py  from_monitor.py  score_run.py  setup_ubuntu.sh
+    tools/   identify.py (plant model and gains from a logged step)  log_step.py  step_plot.py  from_monitor.py  score_run.py  setup_ubuntu.sh  static_check.sh
     firmware/ feather_m0/ (the Arduino sketch that runs core/ on a Feather M0)
     docs/    SPEC.md (the rules)  TUNING.md (how the gains are chosen)  ON_BOARD.md (the bench session)
+
+## Static analysis
+
+Two tools check `core/` on every push and pull request (`tools/static_check.sh`, run by the `static-analysis` job in CI): cppcheck 2.13.0 (warning, style, performance and portability checks) and clang-tidy 18 (`cert-*`, `bugprone-*`, `clang-analyzer-*`). These are CERT-style checks, **not MISRA C**: the MISRA rule text is paid for and no MISRA checker has been run.
+
+| Tool | First run | After triage |
+|---|---|---|
+| cppcheck | 0 findings | 0 |
+| clang-tidy | 3 findings | 0 (one check disabled, reason below) |
+
+- All 3 clang-tidy findings were the same check, `bugprone-easily-swappable-parameters` (`pid_init`, `actuator_scale`, `sup_step`): it warns that neighbouring `int32_t` parameters could be swapped by a caller. None was a defect, and each call in the code passes its arguments in the right order.
+- The check is disabled in `.clang-tidy`, with the reason written there. The reason was tested: swapping `kp` and `ki` in the `pid_init` call in `core/control.c` made 30 of the 181 tests fail.
+- "After" is 0 because of triage, not because code changed: no C code was changed. Static analysis found no real defect in this code.
+- The gate was tried on a deliberately added out-of-bounds array access in `core/pid.c`: `tools/static_check.sh` exited with an error. The bug was then removed.
+- Limits: only `core/` is checked. `firmware/feather_m0/` holds copies of the same files; a `diff` showed them identical when this section was written, but they are not checked separately. Passing these tools does not prove the absence of bugs. In CI the tool versions are whatever Ubuntu's package list provides, which may differ from the versions above.
 
 ## Honest limits
 
@@ -50,3 +65,4 @@ The simulated plant (`tests/plant.py`) is a first-order lag with a transport del
 - The plant is first-order with a delay. Real processes can have a second pole, a nonlinear gain or a sensor with its own lag.
 - The tests run on a PC (x86-64): they find logic and overflow bugs, but not timing, stack use or compiler differences on the Cortex-M0+.
 - The sample rate is fixed at 100 Hz; jitter in the real sample period is not modelled.
+- Static analysis (see above) covers `core/` with CERT-style checks, not MISRA C, and found no real defect: it cannot show timing, stack use or behaviour on the Cortex-M0+.
