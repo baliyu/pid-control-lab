@@ -88,3 +88,14 @@ def test_a_noise_free_step_still_works():
     log, u = open_loop_step(Plant(noise=0.0))
     m = identify.identify(log["t"], u, log["adc"])
     assert abs(m["gain"] - 3.0) / 3.0 < 0.05
+
+
+def test_an_instant_step_is_refused_as_too_fast_to_measure():
+    """A0 joined straight to A1 (no filter) gives a step that is over within a sample. It once produced a time constant of 1.7 ms and gains five times too large."""
+    n = 600
+    t = np.arange(n) * 0.001
+    u = np.zeros(n)
+    u[100:] = 500
+    pv = np.where(np.arange(n) <= 100, 211.5, 1944.7) + np.random.RandomState(3).normal(0, 1.5, n)
+    with pytest.raises(ValueError, match="too fast to measure"):
+        identify.identify(t, u, pv)

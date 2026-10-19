@@ -56,3 +56,30 @@ def test_a_capture_from_the_sketch_goes_through_the_tools_and_gives_the_document
     raw.write_text(stamped)
     assert from_monitor.main([str(raw), str(out)]) == 0
     assert identify.main([str(out)]) == 0
+
+
+def test_a_file_saved_as_utf16_by_notepad_is_read(tmp_path):
+    raw, out = tmp_path / "raw.txt", tmp_path / "out.csv"
+    raw.write_text("t,sp,u,pv\n0.000,203,0,203\n0.001,203,0,204\n# done\n", encoding="utf-16")
+    assert from_monitor.main([str(raw), str(out)]) == 0
+    assert out.read_text().splitlines()[0] == "t,sp,u,pv"
+
+
+def test_a_file_with_a_byte_order_mark_is_read(tmp_path):
+    raw, out = tmp_path / "raw.txt", tmp_path / "out.csv"
+    raw.write_text("t,u,pv\n0.000,0,203\n0.001,0,204\n", encoding="utf-8-sig")
+    assert from_monitor.main([str(raw), str(out)]) == 0
+
+
+@pytest.mark.parametrize("content,expected", [
+    ("", "empty"),
+    ("# feather_m0 pid\n# unknown command (I, Z, S<level>, R<target>)\n", "unknown command"),
+    ("\n".join(f"0.{i:03d},203,0,203" for i in range(500, 560)) + "\n# done\n", "cut off"),
+    ("# only comments here\nhello\n", "no capture in it"),
+    ("t,sp,u,pv\n# done\n", "no rows"),
+])
+def test_a_failure_says_what_is_in_the_file_and_what_to_do(tmp_path, capfd, content, expected):
+    raw = tmp_path / "raw.txt"
+    raw.write_text(content)
+    assert from_monitor.main([str(raw), str(tmp_path / "out.csv")]) == 1
+    assert expected in capfd.readouterr().err

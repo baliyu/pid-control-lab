@@ -8,8 +8,9 @@
  *   I         print the settings
  *   Z         put the output at rest (output 0, which is 5 % of full scale: see core/actuator.h)
  *   S<level>  open-loop step: rest for 0.3 s, then record 0.6 s at 1 kHz while the output steps from 0 to <level> (0..1000) after 0.1 s
- *   R<target> closed-loop run: rest for 0.3 s, then record 1.5 s at 1 kHz while the PID takes the process value from its resting reading to <target> counts
- * Each capture prints a CSV (t,u,pv for S; t,sp,u,pv for R) and then "# done". Lines starting with # are comments.
+ *   R<target> closed-loop run: rest for 0.3 s, then record 0.6 s at 1 kHz while the PID takes the process value from its resting reading to <target> counts
+ * Each capture prints a CSV (t,u,pv for S
+; t,sp,u,pv for R) and then "# done". Lines starting with # are comments.
  *
  * The sketch only reads and writes pins and keeps time: all the control logic is the tested C in core/ (copied here by sync_core.sh).
  */
@@ -24,7 +25,7 @@ extern "C" {
 static const uint32_t TS_US     = 1000;      /* control period: 1 kHz */
 static const int32_t  DAC_FULL  = 1023;      /* 10-bit DAC on A0 */
 static const int      N_OPEN    = 600;       /* open-loop capture: 0.6 s */
-static const int      N_CLOSED  = 1500;      /* closed-loop capture: 1.5 s */
+static const int      N_CLOSED  = 600;       /* closed-loop capture: 0.6 s, the same number of rows as the open-loop one, so it fits in the Serial Monitor */
 static const int      STEP_AT   = 100;       /* the step happens 0.1 s into a capture */
 
 static control_t ctrl;

@@ -38,16 +38,48 @@ def blocks(text):
     return [b for b in found if len(b) > 1]
 
 
+def read_text(path):
+    """The file's text. Notepad can save as UTF-16 ("Unicode") or with a byte-order mark; both are handled."""
+    with open(path, "rb") as f:
+        data = f.read()
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")) or (len(data) > 0 and data.count(b"\x00") > len(data) // 4):
+        return data.decode("utf-16", errors="replace")
+    return data.decode("utf-8-sig", errors="replace")
+
+
+def explain(text):
+    """Why no capture was found, in words: what the file contains and what to do about it."""
+    lines = [clean(raw) for raw in text.splitlines() if raw.strip()]
+    rows = [line for line in lines if ROW.match(line)]
+    notes = [f"the file has {len(lines)} non-empty line(s)."]
+    if not lines:
+        notes.append("It is empty. Copy the output of the Serial Monitor (click in it, Ctrl+A, Ctrl+C) AFTER the line '# done' has appeared, and paste it into the file.")
+    elif any("unknown command" in line for line in lines):
+        notes.append("The sketch answered 'unknown command'. Check that the Serial Monitor line ending is 'Newline' and that the command is typed exactly (S500 or R2000, no spaces).")
+    elif rows and not any(HEADER.match(line) for line in lines):
+        notes.append(f"It has {len(rows)} rows of numbers but no header line (t,u,pv or t,sp,u,pv): the top of the capture was cut off. The Serial Monitor keeps only its most recent lines, "
+                     "so run the capture again and copy it at once.")
+    elif not any(line.startswith("t,") for line in lines):
+        notes.append("There is no capture in it, only: " + " | ".join(lines[:3])[:200] + ". Send the command (S500 or R2000), wait for '# done', then copy.")
+    else:
+        notes.append("There is a header but no rows after it: copy again after the line '# done' has appeared.")
+    return " ".join(notes)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("raw", help="the text copied from the Serial Monitor")
     ap.add_argument("csv", help="the clean file to write")
     ap.add_argument("--block", type=int, default=-1, help="which capture to take (0 is the first, -1 the last, the default)")
     a = ap.parse_args(argv)
-    with open(a.raw, encoding="utf-8", errors="replace") as f:
-        found = blocks(f.read())
+    try:
+        text = read_text(a.raw)
+    except OSError as e:
+        print(f"cannot read {a.raw}: {e.strerror}", file=sys.stderr)
+        return 1
+    found = blocks(text)
     if not found:
-        print("no capture found: there should be a line starting t,u,pv or t,sp,u,pv followed by rows of numbers", file=sys.stderr)
+        print("from_monitor: no capture found (there should be a line starting t,u,pv or t,sp,u,pv followed by rows of numbers).\n  " + explain(text), file=sys.stderr)
         return 1
     try:
         chosen = found[a.block]
